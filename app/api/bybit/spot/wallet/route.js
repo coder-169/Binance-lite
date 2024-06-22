@@ -17,6 +17,40 @@ export async function GET(req, res) {
   try {
     const headerList = headers();
     const token = headerList.get("token");
+    const userId = headerList.get("userId");
+    if (userId) {
+      const user = await User.findOne({ username: userId }).select("-password");
+      if (!user)
+        return NextResponse.json(
+          { success: false, message: "user not found" },
+          { status: 404 }
+        );
+      if (!user.byBitSubscribed)
+        return NextResponse.json(
+          { success: false, message: "user not subscribed" },
+          { status: 400 }
+        );
+
+      const apiKey = user.byBitApiKey;
+      const secret = user.byBitSecretKey;
+      const exchange = new ccxt.bybit({
+        apiKey,
+        secret,
+        enableRateLimit: true,
+        urls: {
+          api: {
+            public: "https://api.bybit.com",
+            private: "https://api.bybit.com",
+          },
+        },
+      });
+      const data = await exchange.privateGetV5AccountWalletBalance({
+        accountType: "UNIFIED",
+      });
+      const assets = data.result.list[0].coin;
+      console.log(assets);
+      return NextResponse.json({ success: true, assets }, { status: 200 });
+    }
     await dbConnect();
     if (!token)
       return NextResponse.json(
@@ -33,6 +67,11 @@ export async function GET(req, res) {
         { success: false, message: "user not found" },
         { status: 404 }
       );
+    if (!user.byBitSubscribed)
+      return NextResponse.json(
+        { success: false, message: "user not subscribed" },
+        { status: 400 }
+      );
 
     const apiKey = user.byBitApiKey;
     const secret = user.byBitSecretKey;
@@ -42,15 +81,15 @@ export async function GET(req, res) {
       enableRateLimit: true,
       urls: {
         api: {
-          public: "https://api-testnet.bybit.com",
-          private: "https://api-testnet.bybit.com",
+          public: "https://api.bybit.com",
+          private: "https://api.bybit.com",
         },
       },
     });
-    const data = await exchange.privateGetV5AccountWalletBalance({accountType:"UNIFIED"});
-    const assets = data.result.list[0].coin.filter(
-      (asset) => asset.walletBalance > 0
-    );
+    const data = await exchange.privateGetV5AccountWalletBalance({
+      accountType: "UNIFIED",
+    });
+    const assets = data.result.list[0].coin
     return NextResponse.json({ success: true, assets }, { status: 200 });
   } catch (error) {
     console.log(error.message);

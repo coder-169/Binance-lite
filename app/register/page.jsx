@@ -32,7 +32,6 @@ const Page = () => {
   }
   const storeCode = async (code) => {
     // send email where the code will be sent
-    console.log(code);
     const expirationTime = new Date().getTime() + 10 * 60 * 1000; // 10 minutes in milliseconds
     const hashedCode = await bcryptjs.hash(code.toString(), 10);
 
@@ -70,7 +69,6 @@ const Page = () => {
         body: JSON.stringify(user),
       });
       const data = await response.json();
-      console.log(data)
       if (data.success) {
         localStorage.setItem("acryptocopytrading-email", user.email);
         storeCode(data.code);
@@ -108,7 +106,6 @@ const Page = () => {
     } // Code has expired
     else {
       storedCode = JSON.parse(storedCode);
-      console.log(verificationCode, storedCode);
       let check = await bcryptjs.compare(verificationCode, storedCode);
       if (check) {
         const res = await fetch("/api/auth/verify", {
@@ -117,7 +114,8 @@ const Page = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: localStorage.getItem("acryptocopytrading-email") || user.email,
+            email:
+              localStorage.getItem("acryptocopytrading-email") || user.email,
           }),
         });
         const data = await res.json();
@@ -139,7 +137,6 @@ const Page = () => {
   };
   const resendEmail = async () => {
     try {
-      console.log(localStorage.getItem("acryptocopytrading-email"))
       const response = await fetch("/api/auth/resend", {
         method: "POST",
         headers: {
@@ -151,7 +148,6 @@ const Page = () => {
       });
       const data = await response.json();
       if (data.success) {
-        console.log(data.code);
         storeCode(data.code);
         toast.success(data.message);
         setVerificationCode("");
@@ -187,7 +183,9 @@ const Page = () => {
     <div className="w-full relative flex items-center h-[100vh] justify-center mx-auto">
       <button className=" text-white absolute left-2 top-4">
         <Link href={"/"}>
-          <Image src="/next.svg" width={100} height={100} className="mx-auto" alt="" />
+          <h3 className="font-bold text-2xl text-gray-700 ">
+            A CRYPTO COPYTRADING
+          </h3>
         </Link>
       </button>
       <div className="flex w-4/5 sm:w-4/5 md:w-4/6 lg:w-2/5 flex-col justify-start">
@@ -210,7 +208,6 @@ const Page = () => {
                   type={"email"}
                   className="w-full"
                   autoComplete="off"
-
                 />
               </div>
               <div className="my-4 flex flex-col sm:flex-row gap-2">
@@ -223,7 +220,6 @@ const Page = () => {
                   className="w-full sm:w-1/2"
                   name="username"
                   autoComplete="off"
-
                 />
                 <TextField
                   value={user.phone}
@@ -248,15 +244,15 @@ const Page = () => {
                   className="w-full"
                 />{" "}
                 {user.password.length > 0 && (
-                  <button type="button" className="absolute right-3 top-5">
+                  <button type="button" className="absolute right-3 top-4">
                     {passType === "text" ? (
                       <VisibilityOff
-                        className="cursor-pointer"
+                        className="cursor-pointer !text-lg"
                         onClick={() => setPassType("password")}
                       />
                     ) : (
                       <RemoveRedEyeIcon
-                        className="cursor-pointer"
+                        className="cursor-pointer !text-lg"
                         onClick={() => setPassType("text")}
                       />
                     )}
@@ -275,15 +271,15 @@ const Page = () => {
                   className="w-full"
                 />
                 {user.password.length > 0 && (
-                  <button type="button" className="absolute right-3 top-5">
+                  <button type="button" className="absolute right-3 top-4">
                     {passType === "text" ? (
                       <VisibilityOff
-                        className="cursor-pointer"
+                        className="cursor-pointer !text-lg"
                         onClick={() => setPassType("password")}
                       />
                     ) : (
                       <RemoveRedEyeIcon
-                        className="cursor-pointer"
+                        className="cursor-pointer !text-lg"
                         onClick={() => setPassType("text")}
                       />
                     )}

@@ -7,11 +7,6 @@ import { NextResponse } from "next/server"
 export async function PUT(req, res) {
     try {
         await dbConnect()
-        const headerList = headers()
-        const token = headerList.get('token')
-        if (!token)
-            return NextResponse.json({ success: false, message: "invalid authorization! please login again" }, { status: 401 })
-       
         const body = await req.json()
         const { email } = body
         const user = await User.findOne({ email })
@@ -22,7 +17,6 @@ export async function PUT(req, res) {
         await user.save()
         return NextResponse.json({ success: true, message: "password updated successfully", user }, { status: 200 })
     } catch (error) {
-        console.log(error)
         return NextResponse.json({ success: false, message: error.message }, { status: 500 })
     }
 }

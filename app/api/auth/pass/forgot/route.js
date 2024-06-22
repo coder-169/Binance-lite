@@ -8,7 +8,6 @@ import { NextResponse } from "next/server"
 export async function POST(req, res) {
     try {
         await dbConnect()
-        const headerList = headers()
         const body = await req.json()
         const { email } = body
         if (!email)

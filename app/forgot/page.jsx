@@ -201,7 +201,7 @@ const Page = () => {
                 className="text-white w-1/2 outline-white border-white bg-blue-500 hover:bg-blue-500 py-2 px-4"
                 variant="contained"
               >
-                UPDATE
+                VERIFY
               </Button>
             </div>
             <div className="my-4 flex gap-8 justify-center">

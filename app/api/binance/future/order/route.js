@@ -8,7 +8,6 @@ import { NextResponse } from "next/server";
 import ccxt from "ccxt";
 
 const customizeOptions = (body) => {
-  console.log(body);
   const { type, side, symbol, options, quantity, price } = body;
 
   if (type === "MARKET".toLocaleLowerCase()) {
@@ -87,20 +86,6 @@ export async function POST(req, res) {
       let order = null
       for (let i = 0; i < userArray.length; i++) {
         let us = userArray[i];
-        // const exfuture = new ccxt.binanceusdm({
-        //   apiKey: us.binanceApiKey,
-        //   secret: us.binanceSecretKey,
-        // });
-        // const { symbol, price, leverage, stopPrice, quantity, side, type } =
-        //   body;
-        // const ord = await exfuture.createOrder(
-        //   symbol,
-        //   type,
-        //   side,
-        //   quantity,
-        //   price,
-        //   body
-        // );
         order = await createFutureOrder(
           body,
           us.binanceApiKey,
@@ -123,18 +108,11 @@ export async function POST(req, res) {
       }
     } else {
       const user = await User.findOne({ username: users }).select("-password");
-      // const exfuture = new ccxt.binanceusdm({
-      //   apiKey: user.binanceApiKey,
-      //   secret: user.binanceSecretKey,
-      // });
-      // const { symbol, leverage, price, stopPrice, quantity, side, type } = body;
-      console.log(user, body);
       order = await createFutureOrder(
         body,
         user.binanceApiKey,
         user.binanceSecretKey
       );
-      console.log(order);
       if (order.error) {
         return NextResponse.json(
           { success: false, message: order.message },

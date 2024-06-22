@@ -1,5 +1,3 @@
-// const BASE_URL = 'https://testnet.binancefuture.com'
-const BASE_URL = "https://fapi.binance.com";
 
 import dbConnect from "@/app/helpers/db";
 import { isAuthenticated } from "@/app/helpers/functions";
@@ -49,7 +47,6 @@ export async function POST(req, res) {
         let coin = symbol.split("-").join("/");
         order = await ex.createOrder(coin, type, side, quantity, price, body);
       }
-      console.log(order)
       return NextResponse.json(
         { success: true,order, message: "order created successfully" },
         { status: 200 }
@@ -68,7 +65,6 @@ export async function POST(req, res) {
       });
       const { symbol, type, side, quantity, price } = body;
       let coin = symbol.split("-").join("/");
-      console.log(body);
       const order = await ex.createOrder(
         coin,
         type,
@@ -82,12 +78,6 @@ export async function POST(req, res) {
         { status: 200 }
       );
     }
-
-    // const price = 0.0000338
-    // const amount = 1
-    // const symbol = 'SHIBUSDTM'
-    // const side = 'buy'
-    // const type = 'limit'
   } catch (error) {
     if (!error.response)
       return NextResponse.json(

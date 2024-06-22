@@ -27,6 +27,7 @@ import Loader from "@/app/components/Loader";
 import Slider, { SliderThumb } from "@mui/material/Slider";
 import { styled } from "@mui/material/styles";
 import Tooltip from "@mui/material/Tooltip";
+import CloseIcon from "@mui/icons-material/Close";
 
 function ValueLabelComponent(props) {
   const { children, value } = props;
@@ -116,6 +117,13 @@ export default function FullWidthTabs() {
       callbackRate: "",
     });
     setValue(newValue);
+    setTickerPrice(0);
+    setCoinData(0);
+    setAssets([]);
+    setCoin("")
+    setQueryCoin("")
+    setShowFutureCoins(false)
+    setShowCoins(false)
   };
   const handleChangeLeverage = (event, newValue) => {
     setOrder({ ...order, leverage: newValue });
@@ -152,16 +160,109 @@ export default function FullWidthTabs() {
         [e.target.name]: e.target.value,
       });
     } else {
+      if (e.target.name === "user") {
+        getAssets(e.target.value);
+      }
       setOrder({ ...order, [e.target.name]: e.target.value });
     }
   };
   // const [user, setUser] = useState({ role: "admin", isSubscribed: true });
   const { setLoading, user, loading, getUserInfo } = useGlobalContext();
   const [coins, setCoins] = useState([]);
+  const [coin, setCoin] = useState("");
+  const [assets, setAssets] = useState([]);
+  const [coinData, setCoinData] = useState(null);
   const [futureCoins, setFutureCoins] = useState([]);
   const [tickerPrice, setTickerPrice] = useState(0);
+  const [allCoins, setAllCoins] = useState([]);
+  const [allFutureCoins, setAllFutureCoins] = useState([]);
+  const [showCoins, setShowCoins] = useState(false);
+  const [showFutureCoins, setShowFutureCoins] = useState(false);
+  const [queryCoin, setQueryCoin] = useState("");
+  const getAssets = async (user) => {
+    if (user.toLowerCase() === "all") return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/bybit/${trs[value]}/wallet`, {
+        method: "GET",
+        headers: {
+          token: localStorage.getItem("auth-token"),
+          userId: user,
+        },
+      });
+      const data = await res.json();
+      console.log(data);
+      if (data.success) {
+        if (data.assets.length > 0) {
+          setAssets(data.assets);
+        }
+        console.log(data);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+    setLoading(false);
+  };
+  const handleCoinFilter = (e) => {
+    setQueryCoin(e.target.value);
+    console.log("called");
+    if (e.target.value === "") {
+      setCoins(allCoins);
+    } else {
+      console.log(allCoins)
+      const newCoins = allCoins.filter((coin) =>
+        coin.symbol.toLowerCase().includes(e.target.value.toLowerCase())
+      );
+      console.log(e.target.value,newCoins)
+      setCoins(newCoins);
+    }
+  };
+  const handleFutureCoinFilter = (e) => {
+    setQueryCoin(e.target.value);
+    if (e.target.value === "") {
+      setFutureCoins(allFutureCoins);
+    } else {
+      const newCoins = allFutureCoins.filter((coin) =>
+        coin.symbol.toLowerCase().includes(e.target.value.toLowerCase())
+      );
+      setFutureCoins(newCoins);
+    }
+  };
+  const handleSymbolChange = (symbol) => {
+    console.log(assets, symbol);
+    if (assets.length <= 0) return;
+    let coin = undefined;
+    if (trs[value] === "spot") {
+      coin = coins.find((a) => a.symbol === symbol);
+    }
+    if (trs[value] === "future") {
+      coin = futureCoins.find((a) => a.symbol === symbol);
+    }
+    if (!coin) return;
+    console.log(coin);
+    console.log(assets, coin.symbol);
+    const asset = assets.find((a) => coin.symbol.includes(a.coin));
+
+    console.log(asset);
+    if (asset) {
+      setCoinData(asset);
+      console.log(asset);
+    } else {
+      setCoinData({
+        coin: coin.symbol,
+        availableToWithdraw: 0,
+      });
+    }
+  };
   const tickerPriceFounder = async (value) => {
     setLoading(true);
+    handleSymbolChange(value);
+    setQueryCoin("");
+    setShowCoins(false);
+    setCoins(allCoins);
+    setCoin(value);
     setOrder({
       ...order,
       symbol: value,
@@ -182,11 +283,16 @@ export default function FullWidthTabs() {
     }
     setLoading(false);
   };
-  const FutureTickerPriceFounder = async (e) => {
+  const FutureTickerPriceFounder = async (value) => {
     setLoading(true);
+    handleSymbolChange(value);
+    setQueryCoin("");
+    setShowFutureCoins(false);
+    setFutureCoins(allFutureCoins);
+    setCoin(value);
     setOrder({
       ...order,
-      symbol: e.target.value,
+      symbol: value,
     });
     const response = await fetch("/api/bybit/ticker", {
       method: "POST",
@@ -194,7 +300,7 @@ export default function FullWidthTabs() {
         "Content-Type": "application/json",
         mark: "future",
       },
-      body: JSON.stringify({ ticker: e.target.value }),
+      body: JSON.stringify({ ticker: value }),
     });
     const data = await response.json();
     console.log(data);
@@ -222,6 +328,8 @@ export default function FullWidthTabs() {
         }
         setCoins(data.tickers);
         setFutureCoins(data.tickersFuture);
+        setAllFutureCoins(data.tickersFuture);
+        setAllCoins(data.tickers);
       } else {
         toast.error(data.message);
       }
@@ -319,7 +427,7 @@ export default function FullWidthTabs() {
           stopPrice: "",
           price: "",
         });
-      setTickerPrice(0);
+        setTickerPrice(0);
       } else {
         toast.error(data.message);
       }
@@ -404,7 +512,7 @@ export default function FullWidthTabs() {
                               </FormControl>
                             </div>
 
-                            <div className="w-full mb-2 sm:mb-4">
+                            {/* <div className="w-full mb-2 sm:mb-4">
                               <FormControl fullWidth>
                                 <InputLabel id="symbol">Coin *</InputLabel>
                                 <Select
@@ -434,6 +542,73 @@ export default function FullWidthTabs() {
                               ) : (
                                 ""
                               )}
+                            </div> */}
+                            <div className="w-full mb-2 sm:mb-4 relative">
+                              <FormControl fullWidth>
+                                {showCoins && (
+                                  <div className=" py-.5 flex items-center justify-between !border-none !outline-none w-full z-50">
+                                    <TextField
+                                      value={queryCoin}
+                                      name="query"
+                                      placeholder="Search Coin"
+                                      className="w-4/5"
+                                      onChange={(e) => handleCoinFilter(e)}
+                                    />
+                                    <button
+                                      onClick={() => setShowCoins(false)}
+                                      type="type"
+                                      className="mr-6 p-2 rounded-lg bg-gray-100"
+                                    >
+                                      <CloseIcon />
+                                    </button>
+                                  </div>
+                                )}
+                                {!showCoins && (
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => setShowCoins(true)}
+                                    className="text-black/80 py-[16px] hover:text-white"
+                                  >
+                                    {coin !== "" ? coin : "--Select Coin--"}
+                                  </Button>
+                                )}
+                                {showCoins && (
+                                  <div className="absolute top-16 left-0 bg-[#fff] z-50 shadow-2xl border p-2 rounded-lg border-gray-100 max-h-80 min-h-max overflow-y-scroll w-full">
+                                    {coins.length > 0 ? (
+                                      coins?.map((symb, idx) => {
+                                        return (
+                                          <button
+                                            key={symb.symbol}
+                                            name="symbol"
+                                            value={order.symbol}
+                                            type="button"
+                                            onClick={() =>
+                                              tickerPriceFounder(symb.symbol)
+                                            }
+                                            className="block px-4 py-2 hover:bg-black/10 w-full"
+                                          >
+                                            {symb.symbol}
+                                          </button>
+                                        );
+                                      })
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="block px-4 py-2 w-full"
+                                      >
+                                        No Coins
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {tickerPrice ? (
+                                  <small className="text-xs block mt-2">
+                                    {tickerPrice}
+                                  </small>
+                                ) : (
+                                  ""
+                                )}
+                              </FormControl>
                             </div>
                             <div className="w-full text-left hidden sm:block mb-4 sm:my-8">
                               <TextField
@@ -447,6 +622,19 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {assets.length
+                                ? assets.map((asset) => {
+                                    if (asset.coin === "USDT") {
+                                      return (
+                                        <div key={asset.coin} className="mt-2">
+                                          <small className="text-gray-500 text-xs">
+                                            {`Available: ${asset.availableToWithdraw} ${asset.coin}`}
+                                          </small>
+                                        </div>
+                                      );
+                                    }
+                                  })
+                                : ""}
                             </div>
                             <div className="w-full text-left hidden sm:block mb-6 sm:my-8">
                               <TextField
@@ -464,6 +652,15 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {coinData ? (
+                                <div className="mt-2">
+                                  <small className="text-gray-500 text-xs">
+                                    {`Available: ${coinData.availableToWithdraw} ${coinData.coin}`}
+                                  </small>
+                                </div>
+                              ) : (
+                                ""
+                              )}
                             </div>
                           </div>
                           <div className="w-full sm:w-1/2">
@@ -585,6 +782,19 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {assets.length
+                              ? assets.map((asset) => {
+                                  if (asset.coin === "USDT") {
+                                    return (
+                                      <div key={asset.coin} className="mt-2">
+                                        <small className="text-gray-500 text-xs">
+                                          {`Available: ${asset.availableToWithdraw} ${asset.coin}`}
+                                        </small>
+                                      </div>
+                                    );
+                                  }
+                                })
+                              : ""}
                           </div>
                           <div className="w-1/2 block sm:hidden mb-4 sm:my-8">
                             <TextField
@@ -602,6 +812,15 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {coinData ? (
+                              <div className="mt-2">
+                                <small className="text-gray-500 text-xs">
+                                  {`Available: ${coinData.availableToWithdraw} ${coinData.coin}`}
+                                </small>
+                              </div>
+                            ) : (
+                              ""
+                            )}
                           </div>
                         </div>
                         <div className="w-full my-4 text-center">
@@ -660,7 +879,7 @@ export default function FullWidthTabs() {
                                 </Select>
                               </FormControl>
                             </div>
-                            <div className="w-full mb-2 sm:mb-4">
+                            {/* <div className="w-full mb-2 sm:mb-4">
                               <FormControl fullWidth>
                                 <InputLabel id="symbol">Coin *</InputLabel>
                                 <Select
@@ -688,6 +907,77 @@ export default function FullWidthTabs() {
                               ) : (
                                 ""
                               )}
+                            </div> */}
+                            <div className="w-full mb-2 sm:mb-4 relative">
+                              <FormControl fullWidth>
+                                {showFutureCoins && (
+                                  <div className=" py-.5 flex items-center justify-between !border-none !outline-none w-full z-50">
+                                    <TextField
+                                      value={queryCoin}
+                                      name="query"
+                                      placeholder="Search Coin"
+                                      className="w-4/5"
+                                      onChange={(e) =>
+                                        handleFutureCoinFilter(e)
+                                      }
+                                    />
+                                    <button
+                                      onClick={() => setFutureCoins(false)}
+                                      type="type"
+                                      className="mr-6 p-2 rounded-lg bg-gray-100"
+                                    >
+                                      <CloseIcon />
+                                    </button>
+                                  </div>
+                                )}
+                                {!showFutureCoins && (
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => setShowFutureCoins(true)}
+                                    className="text-black/80 py-[16px] hover:text-white"
+                                  >
+                                    {coin !== "" ? coin : "--Select Coin--"}
+                                  </Button>
+                                )}
+                                {showFutureCoins && (
+                                  <div className="absolute top-16 left-0 bg-[#fff] z-50 shadow-2xl border p-2 rounded-lg border-gray-100 max-h-80 min-h-max overflow-y-scroll w-full">
+                                    {futureCoins.length > 0 ? (
+                                      futureCoins?.map((symb, idx) => {
+                                        return (
+                                          <button
+                                            key={symb.symbol}
+                                            name="symbol"
+                                            value={order.symbol}
+                                            type="button"
+                                            onClick={() =>
+                                              FutureTickerPriceFounder(
+                                                symb.symbol
+                                              )
+                                            }
+                                            className="block px-4 py-2 hover:bg-black/10 w-full"
+                                          >
+                                            {symb.symbol}
+                                          </button>
+                                        );
+                                      })
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="block px-4 py-2 w-full"
+                                      >
+                                        No Coins
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {tickerPrice ? (
+                                  <small className="text-xs block mt-2">
+                                    {tickerPrice}
+                                  </small>
+                                ) : (
+                                  ""
+                                )}
+                              </FormControl>
                             </div>
                             <div className="w-full text-left hidden sm:block mb-2 sm:my-4">
                               <TextField
@@ -701,6 +991,19 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {assets.length
+                                ? assets.map((asset) => {
+                                    if (asset.coin === "USDT") {
+                                      return (
+                                        <div key={asset.coin} className="mt-2">
+                                          <small className="text-gray-500 text-xs">
+                                            {`Available: ${asset.availableToWithdraw} ${asset.coin}`}
+                                          </small>
+                                        </div>
+                                      );
+                                    }
+                                  })
+                                : ""}
                             </div>
                             <div className="w-full text-left hidden sm:block mb-2 sm:my-4">
                               <TextField
@@ -718,6 +1021,15 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {coinData ? (
+                                <div className="mt-2">
+                                  <small className="text-gray-500 text-xs">
+                                    {`Available: ${coinData.availableToWithdraw} ${coinData.coin}`}
+                                  </small>
+                                </div>
+                              ) : (
+                                ""
+                              )}
                             </div>
                             <div className="w-full md:w-1/2 hidden sm:block mb-4 sm:my-4">
                               <Typography>Leverage</Typography>
@@ -891,6 +1203,15 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {coinData ? (
+                              <div className="mt-2">
+                                <small className="text-gray-500 text-xs">
+                                  {`Available: ${coinData.availableToWithdraw} ${coinData.coin}`}
+                                </small>
+                              </div>
+                            ) : (
+                              ""
+                            )}
                           </div>
                         </div>
                         <div className="w-full sm:w-1/2 block sm:hidden mb-4 sm:my-8">

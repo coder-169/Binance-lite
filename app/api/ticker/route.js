@@ -28,13 +28,10 @@ export async function POST(req, res) {
                 password: process.env.PARAPHRASE,
             })
             const resp = await ex.publicGetMarkPriceSymbolCurrent({ symbol: body.ticker });
-
             return NextResponse.json({ success: true, message: 'ticker price found', resp }, { status: 200 })
-
         }
         if (body.exchange === 'binance') {
             const client = new Spot(process.env.WALLET_API_KEY, process.env.WALLET_SECRET_KEY, { baseURL: "https://testnet.binance.vision" })
-
             if (!client)
                 return NextResponse.json({ success: false, message: 'client not created' })
 

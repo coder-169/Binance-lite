@@ -58,24 +58,8 @@ export async function GET(req, res) {
         });
         const resp = await exc.publicGetMarketAllTickers();
         const respf = await excfuc.futuresPublicGetContractsActive();
-        tickers = resp.data.ticker.sort((a, b) => {
-          if (a.symbol > b.symbol) {
-            return 1;
-          } else if (a.symbol < b.symbol) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
-        tickersFuture = respf.data.sort((a, b) => {
-          if (a.symbol > b.symbol) {
-            return 1;
-          } else if (a.symbol < b.symbol) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
+        tickers = resp.data.ticker
+        tickersFuture = respf.data
       }
     }
     if (ex === "binance") {
@@ -85,33 +69,15 @@ export async function GET(req, res) {
           apiKey: user.api,
           secret: user.secret,
         });
-        coins = await getSpotSymbols();
-        if (coins.error) {
+        tickers = await getSpotSymbols();
+        if (tickers.error) {
           return NextResponse.json(
-            { success: false, d: coins.d },
+            { success: false, d: tickers.d },
             { status: 402 }
           );
         }
-        coinsFuture = await getFutureSymbols();
-        tickers = coins?.sort((a, b) => {
-          if (a.symbol > b.symbol) {
-            return 1;
-          } else if (a.symbol < b.symbol) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
-
-        tickersFuture = coinsFuture?.sort((a, b) => {
-          if (a.symbol > b.symbol) {
-            return 1;
-          } else if (a.symbol < b.symbol) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
+        tickersFuture = await getFutureSymbols();
+        
       }
     }
     if (ex === "bybit") {
@@ -125,8 +91,9 @@ export async function GET(req, res) {
           enableRateLimit: true,
           urls: {
             api: {
-              public: "https://api-testnet.bybit.com",
-              private: "https://api-testnet.bybit.com",
+              public: "https://api.bybit.com",
+              private: "https://api.bybit.com",
+              
             },
           },
         });
@@ -136,25 +103,8 @@ export async function GET(req, res) {
         const resp = await exchange.publicGetV5MarketTickers({
           category: "linear",
         });
-        coins = respp.result.list;
-        tickersFuture = resp.result.list.sort((a, b) => {
-          if (a.symbol > b.symbol) {
-            return 1;
-          } else if (a.symbol < b.symbol) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
-        tickers = coins.sort((a, b) => {
-          if (a.symbol > b.symbol) {
-            return 1;
-          } else if (a.symbol < b.symbol) {
-            return -1;
-          } else {
-            return 0;
-          }
-        });
+        tickersFuture = resp.result.list
+        tickers =respp.result.list;
       }
     }
     return NextResponse.json(

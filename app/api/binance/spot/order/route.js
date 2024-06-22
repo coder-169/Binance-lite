@@ -34,9 +34,7 @@ export async function GET(req, res) {
         { status: 404 }
       );
 
-    const client = new Spot(user.api, user.secret, {
-      baseURL: "https://testnet.binance.vision",
-    });
+    const client = new Spot(user.api, user.secret);
 
     const { data } = await client.account();
     return NextResponse.json({ success: true, data }, { status: 200 });

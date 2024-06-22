@@ -20,6 +20,7 @@ const Sidebar = () => {
   const [menu, setMenu] = useState(false);
   const { getUserInfo, logOutUser, isAuthenticated } = useGlobalContext();
   const [expanded, setExpanded] = React.useState(false);
+  const [wallExpended, setWallExpanded] = React.useState(false);
 
   const handleExpansion = () => {
     setExpanded((prevExpanded) => !prevExpanded);
@@ -33,12 +34,12 @@ const Sidebar = () => {
       <div className="!z-[51] lg:hidden absolute top-4 left-4">
         {!menu ? (
           <button onClick={() => setMenu(true)}>
-            <MenuRoundedIcon />{" "}
+            <MenuRoundedIcon className="menu-bar" />{" "}
           </button>
         ) : (
           <button onClick={() => setMenu(false)}>
             {" "}
-            <HighlightOffRoundedIcon />
+            <HighlightOffRoundedIcon className="menu-bar" />
           </button>
         )}
       </div>
@@ -47,7 +48,7 @@ const Sidebar = () => {
           menu ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 -translate-x-full w-72 z-49 transition-all duration-300 bg-white relative h-full flex justify-center flex-col items-center`}
       >
-        <Link href={"/"} className="mb-12">
+        <Link href={"/"} className="mb-8">
           <h3 className="text-3xl font-medium">Binance Lite</h3>
         </Link>
         <ul className="w-full">
@@ -63,11 +64,91 @@ const Sidebar = () => {
           <li className="my-4">
             <Link
               className="flex px-8 transition-all duration-200 py-4 gap-4 hover:bg-gray-100"
-              href="/"
+              href="/admin/accounts"
             >
               {" "}
               <FaUsers className="text-2xl" /> Users
             </Link>
+          </li>
+          <li className="my-4">
+            <Accordion
+              expanded={
+                wallExpended ||
+                pathName === "/wallets/binance" ||
+                pathName === "/wallets/kucoin" ||
+                pathName === "/wallets/bybit"
+              }
+              onChange={() => setWallExpanded(!wallExpended)}
+              slots={{ transition: Fade }}
+              slotProps={{ transition: { timeout: 400 } }}
+              className={`!border-0 shadow-none px-4 transition-all duration-200 py-1.5 gap-4 ${
+                (!wallExpended || !pathName === "/wallets/binance") &&
+                "hover:bg-gray-100"
+              }`}
+              sx={{
+                "& .MuiAccordion-region": {
+                  height:
+                    wallExpended ||
+                    pathName === "/wallets/binance" ||
+                    pathName === "/wallets/kucoin" ||
+                    pathName === "/wallets/bybit"
+                      ? "auto"
+                      : 0,
+                },
+                "& .MuiAccordionDetails-root": {
+                  display:
+                    pathName === "/wallets/binance" ||
+                    pathName === "/wallets/kucoin" ||
+                    pathName === "/wallets/bybit" ||
+                    wallExpended
+                      ? "block"
+                      : "none",
+                  border: 0,
+
+                  shadow: "none",
+                },
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="panel1-content"
+                id="panel1-header"
+              >
+                <div className="flex gap-4 transition-all duration-200">
+                  <CurrencyBitcoinRoundedIcon />
+                  <Typography>Wallets</Typography>
+                </div>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Link
+                  href="/wallets/binance"
+                  className={`${
+                    pathName === "/wallets/binance" && "bg-gray-200"
+                  } flex gap-4 px-4 transition-all duration-200 py-1.5 hover:bg-gray-200`}
+                >
+                  <CurrencyBitcoinRoundedIcon />
+                  <Typography>Binance</Typography>
+                </Link>
+                <Link
+                  href="/wallets/kucoin"
+                  className={`${
+                    pathName === "/wallets/kucoin" && "bg-gray-200"
+                  } flex gap-4 px-4 transition-all duration-200 py-1.5 hover:bg-gray-200`}
+                >
+                  <CurrencyBitcoinRoundedIcon />
+                  <Typography>Kucoin</Typography>
+                </Link>
+                <Link
+                  href="/wallets/bybit"
+                  className={`${
+                    pathName === "/wallets/bybit" && "bg-gray-200"
+                  } flex gap-4 px-4 transition-all duration-200 py-1.5 hover:bg-gray-200`}
+                >
+                  <CurrencyBitcoinRoundedIcon />
+                  <Typography>ByBit</Typography>
+                </Link>
+              </AccordionDetails>
+            </Accordion>
           </li>
           <li className="my-4">
             <Accordion

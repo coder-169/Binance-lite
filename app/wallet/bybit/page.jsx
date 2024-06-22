@@ -74,6 +74,7 @@ export default function FullWidthTabs() {
     useGlobalContext();
   const router = useRouter();
   const [wallet, setWallet] = useState([]);
+  const trs = ['spot','future']
   const getUserWallet = async () => {
     console.log(user)
     if (!localStorage.getItem("auth-token")) return;
@@ -139,7 +140,7 @@ export default function FullWidthTabs() {
                       key={coin.coin + idx}
                       symbol={coin.coin}
                       amount={parseFloat(coin.walletBalance).toFixed(3)}
-                      inOrder={(parseFloat(coin.walletBalance) - parseFloat(coin.transferBalance)).toFixed(3)}
+                      inOrder={(parseFloat(coin.walletBalance) - parseFloat(coin.availableToWithdraw)).toFixed(3)}
                     />
                   );
                 })}

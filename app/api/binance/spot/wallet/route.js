@@ -14,7 +14,46 @@ export async function GET(req, res) {
   try {
     const headerList = headers();
     const token = headerList.get("token");
+    const userId = headerList.get("userId");
     await dbConnect();
+    console.log(token)
+    if (userId) {
+      const user = await User.findOne({ username: userId }).select("-password");
+      if (!user)
+        return NextResponse.json(
+          { success: false, message: "user not found" },
+          { status: 404 }
+        );
+      if (!user.binanceSubscribed)
+        return NextResponse.json(
+          { success: false, message: "user not subscribed " },
+          { status: 400 }
+        );
+      const serverTime = await getServerTime();
+      var recvWindow = 2000; // Maximum recvWindow value
+      const params = { timestamp: serverTime - recvWindow };
+      let query = Object.keys(params)
+        .map((key) => `${key}=${encodeURIComponent(params[key])}`)
+        .join("&");
+      const signature = crypto
+        .createHmac("sha256", process.env.WALLET_SECRET_KEY)
+        .update(query)
+        .digest("hex");
+      query += `&signature=${signature}`;
+      const url = "https://api.binance.com/api/v3/account?" + query;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "X-MBX-APIKEY": process.env.WALLET_API_KEY,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+      const d = await response.json();
+      console.log(d.balances[0]);
+      // /api/v3/account
+      const assets = d.balances;
+      return NextResponse.json({ success: true, assets }, { status: 200 });
+    }
     if (!token)
       return NextResponse.json(
         {
@@ -52,7 +91,6 @@ export async function GET(req, res) {
       },
     });
     const d = await response.json();
-    console.log(d);
     // /api/v3/account
     const assets = d?.balances?.filter(
       (asset) => parseInt(asset.free) + parseInt(asset.locked) > 0

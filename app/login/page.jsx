@@ -67,7 +67,7 @@ const Page = () => {
     <div className="w-full relative flex items-center justify-center h-[100vh]">
       <div className=" text-white absolute left-2 top-4">
         <Link href={"/"}>
-          <Image src="/next.svg" width={100} height={100} className="mx-auto" alt="" />
+          <h3 className="font-bold text-2xl text-gray-700 ">A CRYPTO COPYTRADING</h3>
         </Link>
       </div>
       <div className="flex flex-col justify-center w-3/4 sm:w-3/5 md:1/2 lg:w-2/5 ">
@@ -98,15 +98,15 @@ const Page = () => {
                 type={passType}
               />
               {userData.password.length > 0 && (
-                <button type="button" className="absolute right-3 top-5">
+                <button type="button" className="absolute  right-3 top-4">
                   {passType === "text" ? (
                     <RemoveRedEyeSharp
-                      className="cursor-pointer"
+                      className="cursor-pointer !text-lg"
                       onClick={() => setPassType("password")}
                     />
                   ) : (
                     <RemoveRedEyeSharp
-                      className="cursor-pointer"
+                      className="cursor-pointer !text-lg"
                       onClick={() => setPassType("text")}
                     />
                   )}

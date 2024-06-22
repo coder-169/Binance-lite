@@ -22,11 +22,11 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import CoinData from "@/app/components/CoinData";
 import Loader from "@/app/components/Loader";
 import Slider, { SliderThumb } from "@mui/material/Slider";
 import { styled } from "@mui/material/styles";
 import Tooltip from "@mui/material/Tooltip";
+import CloseIcon from "@mui/icons-material/Close";
 
 function ValueLabelComponent(props) {
   const { children, value } = props;
@@ -103,6 +103,18 @@ function valuetext(value) {
 export default function FullWidthTabs() {
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
+  const trs = ["spot", "future"];
+  const [coins, setCoins] = useState([]);
+  const [coinData, setCoinData] = useState(null);
+  const [assets, setAssets] = useState([]);
+  const [futureCoins, setFutureCoins] = useState([]);
+  const [tickerPrice, setTickerPrice] = useState(0);
+  const [allCoins, setAllCoins] = useState([]);
+  const [allFutureCoins, setAllFutureCoins] = useState([]);
+  const [showCoins, setShowCoins] = useState(false);
+  const [showFutureCoins, setShowFutureCoins] = useState(false);
+  const [queryCoin, setQueryCoin] = useState("");
+  const [coin, setCoin] = useState("");
   const handleValueChange = (event, newValue) => {
     setOrder({
       symbol: "",
@@ -137,6 +149,38 @@ export default function FullWidthTabs() {
     leverage: 1,
   });
   const [users, setUsers] = useState([]);
+  const getAssets = async (user) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`/api/kucoin/spot/wallet`, {
+        headers: {
+          token: localStorage.getItem("auth-token"),
+          userId: user,
+        },
+      });
+      const data = await res.json();
+      console.log(data);
+      if (data.success) {
+        if (data.assets.length > 0) {
+          setAssets(data.assets);
+        }
+        console.log(data);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+    setLoading(false);
+  };
+  const handleSymbolChange = async (symbol) => {
+    if (assets.length <= 0) return;
+    console.log(symbol.split("-")[0]);
+    const asset = assets.find((a) => a.currency === symbol.split("-")[0]);
+    if (asset) {
+      setCoinData(asset);
+    }
+  };
   const handleChange = (e) => {
     if (e.target.name === "price" && e.target.value !== "") {
       setOrder({
@@ -147,22 +191,53 @@ export default function FullWidthTabs() {
         [e.target.name]: e.target.value,
       });
     } else {
+      if (e.target.name === "user") {
+        getAssets(e.target.value);
+      }
       setOrder({ ...order, [e.target.name]: e.target.value });
     }
   };
   // const [user, setUser] = useState({ role: "admin", isSubscribed: true });
   const { setLoading, user, loading, getUserInfo } = useGlobalContext();
-  const [coins, setCoins] = useState([]);
-  const [futureCoins, setFutureCoins] = useState([]);
-  const [tickerPrice, setTickerPrice] = useState(0);
-  const tickerPriceFounder = async (e) => {
-    const idx = coins.filter((c) => c.symbol === e.target.value);
+  const handleCoinFilter = (e) => {
+    setQueryCoin(e.target.value);
+    console.log("called");
+    if (e.target.value === "") {
+      setCoins(allCoins);
+    } else {
+      console.log(allCoins);
+      const newCoins = allCoins.filter((coin) =>
+        coin.symbol.toLowerCase().includes(e.target.value.toLowerCase())
+      );
+      console.log(e.target.value, newCoins);
+      setCoins(newCoins);
+    }
+  };
+  const handleFutureCoinFilter = (e) => {
+    setQueryCoin(e.target.value);
+    if (e.target.value === "") {
+      setFutureCoins(allFutureCoins);
+    } else {
+      const newCoins = allFutureCoins.filter((coin) =>
+        coin.symbol.toLowerCase().includes(e.target.value.toLowerCase())
+      );
+      setFutureCoins(newCoins);
+    }
+  };
+  const tickerPriceFounder = async (value) => {
+    const idx = coins.filter((c) => c.symbol === value);
 
     setTickerPrice(idx[0].averagePrice);
+
+    handleSymbolChange(value);
+    setQueryCoin("");
+    setShowCoins(false);
+    setCoins(allCoins);
+    setCoin(value);
     // setLoading(true);
     setOrder({
       ...order,
-      symbol: e.target.value,
+      symbol: value,
     });
     // const response = await fetch("/api/ticker", {
     //   method: "POST",
@@ -178,13 +253,18 @@ export default function FullWidthTabs() {
     // }
     // setLoading(false);
   };
-  const FutureTickerPriceFounder = async (e) => {
-    const idx = futureCoins.filter((c) => c.symbol === e.target.value);
+  const FutureTickerPriceFounder = async (value) => {
+    const idx = futureCoins.filter((c) => c.symbol === value);
     setTickerPrice(idx[0].indexPrice);
     // setLoading(true);
+    handleSymbolChange(value);
+    setQueryCoin("");
+    setShowFutureCoins(false);
+    setFutureCoins(allFutureCoins);
+    setCoin(value);
     setOrder({
       ...order,
-      symbol: e.target.value,
+      symbol: value,
     });
     // const response = await fetch("/api/ticker", {
     //   method: "POST",
@@ -218,6 +298,8 @@ export default function FullWidthTabs() {
           setUsers(newArray);
           setCoins(data.tickers);
           setFutureCoins(data.tickersFuture);
+          setAllFutureCoins(data.tickersFuture);
+          setAllCoins(data.tickers);
         }
       } else {
         toast.error(data.message);
@@ -272,15 +354,13 @@ export default function FullWidthTabs() {
     };
   };
 
-  const trs = ["spot", "future"];
   const orderHandler = async (e) => {
     console.log(order);
     e.preventDefault();
     const { quantity, quoteOrderQty, type, stopPrice, price, leverage } = order;
-    if (quantity === "" )
+    if (quantity === "") return toast.error("please! fill all the fields");
+    if ((type === "stop_limit" || type === "limit") && price === "")
       return toast.error("please! fill all the fields");
-    if((type === "stop_limit" || type === 'limit' )&& price === '')
-    return toast.error("please! fill all the fields");
     if (
       (stopPrice === "" && type === "stop_limit") ||
       (stopPrice === "" && type === "stop_market")
@@ -319,7 +399,7 @@ export default function FullWidthTabs() {
           stopPrice: "",
           price: "",
         });
-        setTickerPrice(0)
+        setTickerPrice(0);
       } else {
         toast.error(data.message);
       }
@@ -403,7 +483,7 @@ export default function FullWidthTabs() {
                                 </Select>
                               </FormControl>
                             </div>
-
+                            {/* 
                             <div className="w-full mb-2 sm:mb-4">
                               <FormControl fullWidth>
                                 <InputLabel id="symbol">Coin *</InputLabel>
@@ -427,6 +507,73 @@ export default function FullWidthTabs() {
                                   })}
                                 </Select>
                               </FormControl>
+                            </div> */}
+                            <div className="w-full mb-2 sm:mb-4 relative">
+                              <FormControl fullWidth>
+                                {showCoins && (
+                                  <div className=" py-.5 flex items-center justify-between !border-none !outline-none w-full z-50">
+                                    <TextField
+                                      value={queryCoin}
+                                      name="query"
+                                      placeholder="Search Coin"
+                                      className="w-4/5"
+                                      onChange={(e) => handleCoinFilter(e)}
+                                    />
+                                    <button
+                                      onClick={() => setShowCoins(false)}
+                                      type="type"
+                                      className="mr-6 p-2 rounded-lg bg-gray-100"
+                                    >
+                                      <CloseIcon />
+                                    </button>
+                                  </div>
+                                )}
+                                {!showCoins && (
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => setShowCoins(true)}
+                                    className="text-black/80 py-[16px] hover:text-white"
+                                  >
+                                    {coin !== "" ? coin : "--Select Coin--"}
+                                  </Button>
+                                )}
+                                {showCoins && (
+                                  <div className="absolute top-16 left-0 bg-[#fff] z-50 shadow-2xl border p-2 rounded-lg border-gray-100 max-h-80 min-h-max overflow-y-scroll w-full">
+                                    {coins.length > 0 ? (
+                                      coins?.map((symb, idx) => {
+                                        return (
+                                          <button
+                                            key={symb.symbol}
+                                            name="symbol"
+                                            value={order.symbol}
+                                            type="button"
+                                            onClick={() =>
+                                              tickerPriceFounder(symb.symbol)
+                                            }
+                                            className="block px-4 py-2 hover:bg-black/10 w-full"
+                                          >
+                                            {symb.symbol}
+                                          </button>
+                                        );
+                                      })
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="block px-4 py-2 w-full"
+                                      >
+                                        No Coins
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {tickerPrice ? (
+                                  <small className="text-xs block mt-2">
+                                    {tickerPrice}
+                                  </small>
+                                ) : (
+                                  ""
+                                )}
+                              </FormControl>
                             </div>
                             <div className="w-full text-left hidden sm:block mb-4 sm:my-8">
                               <TextField
@@ -440,6 +587,22 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {assets.length
+                                ? assets.map((asset) => {
+                                    if (asset.currency === "USDT") {
+                                      return (
+                                        <div
+                                          key={asset.currency}
+                                          className="mt-2"
+                                        >
+                                          <small className="text-gray-500 text-xs">
+                                            {`Available: ${asset.available} ${asset.currency}`}
+                                          </small>
+                                        </div>
+                                      );
+                                    }
+                                  })
+                                : ""}
                             </div>
                             <div className="w-full text-left hidden sm:block mb-6 sm:my-8">
                               <TextField
@@ -457,6 +620,15 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {coinData ? (
+                                <div className="mt-2">
+                                  <small className="text-gray-500 text-xs">
+                                    {`Available: ${coinData.available} ${coinData.currency}`}
+                                  </small>
+                                </div>
+                              ) : (
+                                ""
+                              )}
                             </div>
                           </div>
                           <div className="w-full sm:w-1/2">
@@ -652,7 +824,7 @@ export default function FullWidthTabs() {
                                 </Select>
                               </FormControl>
                             </div>
-                            <div className="w-full mb-2 sm:mb-4">
+                            {/* <div className="w-full mb-2 sm:mb-4">
                               <FormControl fullWidth>
                                 <InputLabel id="symbol">Coin *</InputLabel>
                                 <Select
@@ -675,6 +847,77 @@ export default function FullWidthTabs() {
                                   })}
                                 </Select>
                               </FormControl>
+                            </div> */}
+                            <div className="w-full mb-2 sm:mb-4 relative">
+                              <FormControl fullWidth>
+                                {showFutureCoins && (
+                                  <div className=" py-.5 flex items-center justify-between !border-none !outline-none w-full z-50">
+                                    <TextField
+                                      value={queryCoin}
+                                      name="query"
+                                      placeholder="Search Coin"
+                                      className="w-4/5"
+                                      onChange={(e) =>
+                                        handleFutureCoinFilter(e)
+                                      }
+                                    />
+                                    <button
+                                      onClick={() => setFutureCoins(false)}
+                                      type="type"
+                                      className="mr-6 p-2 rounded-lg bg-gray-100"
+                                    >
+                                      <CloseIcon />
+                                    </button>
+                                  </div>
+                                )}
+                                {!showFutureCoins && (
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => setShowFutureCoins(true)}
+                                    className="text-black/80 py-[16px] hover:text-white"
+                                  >
+                                    {coin !== "" ? coin : "--Select Coin--"}
+                                  </Button>
+                                )}
+                                {showFutureCoins && (
+                                  <div className="absolute top-16 left-0 bg-[#fff] z-50 shadow-2xl border p-2 rounded-lg border-gray-100 max-h-80 min-h-max overflow-y-scroll w-full">
+                                    {futureCoins.length > 0 ? (
+                                      futureCoins?.map((symb, idx) => {
+                                        return (
+                                          <button
+                                            key={symb.symbol}
+                                            name="symbol"
+                                            value={order.symbol}
+                                            type="button"
+                                            onClick={() =>
+                                              FutureTickerPriceFounder(
+                                                symb.symbol
+                                              )
+                                            }
+                                            className="block px-4 py-2 hover:bg-black/10 w-full"
+                                          >
+                                            {symb.symbol}
+                                          </button>
+                                        );
+                                      })
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="block px-4 py-2 w-full"
+                                      >
+                                        No Coins
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {tickerPrice ? (
+                                  <small className="text-xs block mt-2">
+                                    {tickerPrice}
+                                  </small>
+                                ) : (
+                                  ""
+                                )}
+                              </FormControl>
                             </div>
                             <div className="w-full text-left hidden sm:block mb-2 sm:my-4">
                               <TextField
@@ -688,6 +931,22 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {assets.length
+                                ? assets.map((asset) => {
+                                    if (asset.currency === "USDT") {
+                                      return (
+                                        <div
+                                          key={asset.currency}
+                                          className="mt-2"
+                                        >
+                                          <small className="text-gray-500 text-xs">
+                                            {`Available: ${asset.available} ${asset.currency}`}
+                                          </small>
+                                        </div>
+                                      );
+                                    }
+                                  })
+                                : ""}
                             </div>
                             <div className="w-full text-left hidden sm:block mb-2 sm:my-4">
                               <TextField
@@ -705,6 +964,15 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {coinData ? (
+                                <div className="mt-2">
+                                  <small className="text-gray-500 text-xs">
+                                    {`Available: ${coinData.available} ${coinData.currency}`}
+                                  </small>
+                                </div>
+                              ) : (
+                                ""
+                              )}
                             </div>
                             <div className="w-full md:w-1/2 hidden sm:block mb-2 sm:my-4">
                               <Slider
@@ -857,6 +1125,22 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {assets.length
+                              ? assets.map((asset) => {
+                                  if (asset.currency === "USDT") {
+                                    return (
+                                      <div
+                                        key={asset.currency}
+                                        className="mt-2"
+                                      >
+                                        <small className="text-gray-500 text-xs">
+                                          {`Available: ${asset.available} ${asset.currency}`}
+                                        </small>
+                                      </div>
+                                    );
+                                  }
+                                })
+                              : ""}
                           </div>
                           <div className="w-1/2 block sm:hidden mb-4 sm:my-8">
                             <TextField
@@ -874,6 +1158,15 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {coinData ? (
+                              <div className="mt-2">
+                                <small className="text-gray-500 text-xs">
+                                  {`Available: ${coinData.available} ${coinData.currency}`}
+                                </small>
+                              </div>
+                            ) : (
+                              ""
+                            )}
                           </div>
                         </div>
                         <div className="w-full sm:w-1/2 block sm:hidden mb-4 sm:my-8">

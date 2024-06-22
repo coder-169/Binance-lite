@@ -152,13 +152,9 @@ export const getSpotSymbols = async (req, res) => {
     if (response.status !== 200) {
       return { error: true, d };
     }
-    const symbols = d.symbols?.filter((symbol) =>
-      symbol.permissions.includes("SPOT")
-    );
-    console.log(d.symbols.length, symbols.length);
+    const symbols = d.symbols;
     return symbols;
   } catch (error) {
-    console.log(error);
     return NextResponse.json({ error });
   }
 };
@@ -174,10 +170,8 @@ export const getFutureSymbols = async (req, res) => {
     });
 
     const d = await response.json();
-    console.log(response);
     return d.symbols;
   } catch (error) {
-    console.log(error);
     return NextResponse.json({ error });
   }
 };
@@ -203,14 +197,12 @@ export const createSpotOrder = async (params, api, secret) => {
     let query = Object.keys(params)
       .map((key) => `${key}=${encodeURIComponent(params[key])}`)
       .join("&");
-    console.log(query, secret);
     const signature = crypto
       .createHmac("sha256", secret)
       .update(query)
       .digest("hex");
     query += `&signature=${signature}`;
     const url = "https://api.binance.com/api/v3/order?" + query;
-    console.log(url);
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -218,13 +210,12 @@ export const createSpotOrder = async (params, api, secret) => {
         "Content-Type": "application/x-www-form-urlencoded",
       },
     });
-    // console.log(response)
     const data = await response.json();
-    console.log(response.status);
+    console.log(data);
     if (response.status === 200) {
       return { data, error: false };
     } else {
-      return { message: data.message, error: true };
+      return { message: data.msg, error: true };
     }
   } catch (error) {
     return { error: true, message: error.message };
@@ -238,14 +229,12 @@ export const createFutureOrder = async (params, api, secret) => {
     let query = Object.keys(params)
       .map((key) => `${key}=${encodeURIComponent(params[key])}`)
       .join("&");
-    console.log(query, secret);
     const signature = crypto
       .createHmac("sha256", secret)
       .update(query)
       .digest("hex");
     query += `&signature=${signature}`;
     const url = "https://fapi.binance.com/fapi/v1/order?" + query;
-    console.log(url);
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -253,12 +242,12 @@ export const createFutureOrder = async (params, api, secret) => {
         "Content-Type": "application/x-www-form-urlencoded",
       },
     });
-    // console.log(response)
     const data = await response.json();
-    console.log(data);
+    console.log(data)
     if (response.status === 200) {
       return { data, error: false };
     } else {
+      if(data.code === -4164)  return { message: "Order price must be greater than 5UDT", error: true };
       return { message: data.msg || data.message, error: true };
     }
   } catch (error) {
@@ -283,19 +272,16 @@ export const createByBitSpotOrder = async (params, api, secret) => {
       "X-BAPI-RECV-WINDOW": recvWindow.toString(),
       "Content-Type": "application/json; charset=utf-8",
     };
-    const url = "https://api-testnet.bybit.com/v2/private/order/create";
-    console.log(url);
+    const url = "https://api.bybit.com/v2/private/order/create";
     const response = await fetch(url, {
       method: "POST",
       headers,
     });
-    // console.log(response)
     const data = await response.json();
-    console.log(response);
     if (response.status === 200) {
       return { data, error: false };
     } else {
-      return { message: data.message, error: true };
+      return { message: data.msg || data.message, error: true };
     }
   } catch (error) {
     return { error: true, message: error.message };

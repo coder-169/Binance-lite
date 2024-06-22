@@ -11,9 +11,37 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 export async function GET(req, res) {
     try {
-
+        console.log('called')
         const headerList = headers()
         const token = headerList.get('token')
+        const userId = headerList.get('userId')
+        console.log(userId)
+        if(userId){
+            const user = await User.findOne({username:userId}).select("-password");
+            if (!user)
+                return NextResponse.json({ success: false, message: "user not found" }, { status: 404 })
+            console.log(user)
+            if (!user.byBitSubscribed)
+                return NextResponse.json({ success: false, message: "user not subscribed" }, { status: 400 })
+            const params = {
+                timestamp: Date.now(),
+            }
+            let queryString = Object.keys(params).map(key => `${key}=${encodeURIComponent(params[key])}`).join('&');
+            const signature = crypto.createHmac('sha256', user.byBitSecretKey).update(queryString).digest('hex')
+            queryString += '&signature=' + signature;
+            const url = BASE_URL + `/fapi/v2/account?` + queryString;
+            console.log(url)
+            const response = await fetch(url, {
+                headers: {
+                    'X-MBX-APIKEY': user.byBitApiKey,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            const data = await response.json()
+            console.log(data)
+    
+            return NextResponse.json({ success: true, data }, { status: 200 })
+        }
         await dbConnect()
         if (!token)
             return NextResponse.json({ success: false, message: "invalid authorization! please login again" }, { status: 401 })

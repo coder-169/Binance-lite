@@ -102,8 +102,8 @@ export async function POST(req, res) {
           enableRateLimit: true,
           urls: {
             api: {
-              public: "https://api-testnet.bybit.com",
-              private: "https://api-testnet.bybit.com",
+              public: "https://api.bybit.com",
+              private: "https://api.bybit.com",
             },
           },
         });
@@ -180,8 +180,8 @@ export async function POST(req, res) {
         enableRateLimit: true,
         urls: {
           api: {
-            public: "https://api-testnet.bybit.com",
-            private: "https://api-testnet.bybit.com",
+            public: "https://api.bybit.com",
+            private: "https://api.bybit.com",
           },
         },
       });

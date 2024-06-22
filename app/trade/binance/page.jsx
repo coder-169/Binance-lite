@@ -3,6 +3,7 @@ import * as React from "react";
 import { useEffect, useState } from "react";
 import TextField from "@mui/material/TextField";
 import AdminLayout from "../../layouts/AdminLayout";
+import Autocomplete from "@mui/material/Autocomplete";
 import {
   Button,
   FormControl,
@@ -22,11 +23,11 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import CoinData from "@/app/components/CoinData";
 import Loader from "@/app/components/Loader";
 import Slider, { SliderThumb } from "@mui/material/Slider";
 import { styled } from "@mui/material/styles";
 import Tooltip from "@mui/material/Tooltip";
+import CloseIcon from "@mui/icons-material/Close";
 
 function ValueLabelComponent(props) {
   const { children, value } = props;
@@ -56,7 +57,7 @@ const trades = [
 ];
 const sides = ["buy", "sell"];
 
-const futureTrades = ["market", "limit", "stop_limit", "stop_market"];
+const futureTrades = ["market", "limit", "stop", "stop_market"];
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
 
@@ -121,6 +122,7 @@ export default function FullWidthTabs() {
     price: "",
     leverage: 1,
   });
+  const [coin, setCoin] = useState(null);
   const handleValueChange = (event, newValue) => {
     setOrder({
       symbol: "",
@@ -134,16 +136,22 @@ export default function FullWidthTabs() {
       callbackRate: "",
     });
     setValue(newValue);
+    setCoinData(null);
+    setCoin(null);
+    setAssets([]);
+    setTickerPrice(0);
   };
   const handleChangeLeverage = (event, newValue) => {
     setOrder({ ...order, leverage: newValue });
   };
   const handleChangeIndex = (index) => {
     setValue(index);
+    setQueryCoin("");
   };
-
+  
   const [users, setUsers] = useState([]);
   const handleChange = (e) => {
+    console.log(e + "here");
     if (
       e.target.name === "type" &&
       e.target.value === "market" &&
@@ -160,16 +168,106 @@ export default function FullWidthTabs() {
         [e.target.name]: e.target.value,
       });
     } else {
+      if (e.target.name === "user") {
+        getAssets(e.target.value);
+      }
+
       setOrder({ ...order, [e.target.name]: e.target.value });
     }
   };
   // const [user, setUser] = useState({ role: "admin", isSubscribed: true });
   const { setLoading, user, loading, getUserInfo } = useGlobalContext();
   const [coins, setCoins] = useState([]);
+  const [coinData, setCoinData] = useState(null);
+  const [assets, setAssets] = useState([]);
   const [futureCoins, setFutureCoins] = useState([]);
+  const [allCoins, setAllCoins] = useState([]);
+  const [allFutureCoins, setAllFutureCoins] = useState([]);
+  const [showCoins, setShowCoins] = useState(false);
+  const [showFutureCoins, setShowFutureCoins] = useState(false);
+  const [queryCoin, setQueryCoin] = useState("");
+  const [inputValue, setInputValue] = React.useState("");
+
   const [tickerPrice, setTickerPrice] = useState(0);
+  const handleCloseCoins = () => {
+    setShowCoins(false);
+  };
+  const handleCoinFilter = (e) => {
+    setQueryCoin(e.target.value);
+    if (e.target.value === "") {
+      setCoins(allCoins);
+    } else {
+      const newCoins = allCoins.filter((coin) =>
+        coin.symbol.toLowerCase().includes(e.target.value.toLowerCase())
+      );
+      setCoins(newCoins);
+    }
+  };
+  const handleFutureCoinFilter = (e) => {
+    setQueryCoin(e.target.value);
+    if (e.target.value === "") {
+      setFutureCoins(allFutureCoins);
+    } else {
+      const newCoins = allFutureCoins.filter((coin) =>
+        coin.symbol.toLowerCase().includes(e.target.value.toLowerCase())
+      );
+      setFutureCoins(newCoins);
+    }
+  };
+  const getAssets = async (user) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/binance/${trs[value]}/wallet`, {
+        headers: {
+          token: localStorage.getItem("auth-token"),
+          userId: user,
+        },
+      });
+      const data = await res.json();
+      console.log(data);
+      if (data.success) {
+        if (data.assets.length > 0) {
+          setAssets(data.assets);
+        }
+        console.log(data);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+    setLoading(false);
+  };
+  const handleSymbolChange = (symbol) => {
+    console.log(assets, symbol);
+    if (assets.length <= 0) return;
+    let coin = undefined;
+    if (trs[value] === "spot") {
+      coin = coins.find((a) => a.symbol === symbol);
+    }
+    if (trs[value] === "future") {
+      coin = futureCoins.find((a) => a.symbol === symbol);
+    }
+    if (!coin) return;
+    console.log(assets, coin);
+    const asset = assets.find((a) => a.asset === coin.baseAsset);
+
+    console.log(asset);
+    if (asset) {
+      setCoinData(asset);
+      console.log(asset);
+    }
+  };
   const tickerPriceFounder = async (value) => {
     setLoading(true);
+    console.log("here");
+    handleSymbolChange(value);
+    setQueryCoin("");
+    setShowCoins(false);
+    setCoins(allCoins);
+    const asset = coins.find((a) => a.symbol === value);
+    console.log(asset);
+    setCoin(asset);
     setOrder({
       ...order,
       symbol: value,
@@ -189,11 +287,18 @@ export default function FullWidthTabs() {
     }
     setLoading(false);
   };
-  const FutureTickerPriceFounder = async (e) => {
+  const FutureTickerPriceFounder = async (value) => {
     setLoading(true);
+    handleSymbolChange(value);
+    setQueryCoin("");
+    setShowFutureCoins(false);
+    setFutureCoins(allFutureCoins);
+    const asset = futureCoins.find((a) => a.symbol === value);
+    console.log(asset);
+    setCoin(asset);
     setOrder({
       ...order,
-      symbol: e.target.value,
+      symbol: value,
     });
     // setTickerPrice(4)
     const response = await fetch("/api/binance/ticker", {
@@ -202,7 +307,7 @@ export default function FullWidthTabs() {
         "Content-Type": "application/json",
         mark: "future",
       },
-      body: JSON.stringify({ ticker: e.target.value }),
+      body: JSON.stringify({ ticker: value }),
     });
     const data = await response.json();
     console.log(data);
@@ -231,53 +336,14 @@ export default function FullWidthTabs() {
           setUsers(newArray);
         }
         setCoins(data.tickers);
+        setAllCoins(data.tickers);
+        setAllFutureCoins(data.tickersFuture);
         setFutureCoins(data.tickersFuture);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
-    }
-    setLoading(false);
-  };
-  const dispatchOrder = async () => {
-    setLoading(true);
-    try {
-      const { type, side, symbol, user, amount } = order;
-      if (type === "" || side === "" || symbol === "" || amount === "") {
-        setLoading(false);
-        return toast.error("please enter all fields");
-      }
-
-      let url = "/api/binance/spot/order";
-      console.log(value);
-      console.log(JSON.stringify(order));
-      return;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(order),
-      });
-      const data = await response.json();
-      if (data.success) {
-        toast.success(data.message);
-        setOrder({
-          symbol: "",
-          quantity: "",
-          type: "",
-          quoteOrderQty: "",
-          side: "",
-          user: "",
-          stopPrice: "",
-          price: "",
-        });
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
       toast.error(error.message);
     }
     setLoading(false);
@@ -319,7 +385,7 @@ export default function FullWidthTabs() {
     const { quantity, quoteOrderQty, stopPrice, price, leverage } = order;
     return {
       quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-      price: parseFloat(parseFloat(price)),
+      price: parseFloat(parseFloat(price).toFixed(2)),
       stopPrice: parseFloat(parseFloat(stopPrice)),
       quoteOrderQty: parseFloat(parseFloat(quoteOrderQty).toFixed(3)),
       leverage: parseFloat(leverage),
@@ -339,6 +405,7 @@ export default function FullWidthTabs() {
       price,
       leverage,
     } = order;
+    console.log(order);
     if (symbol === "" || side === "" || type === "") return {};
     if (trs[value] === "future") {
       if (type === "limit") {
@@ -347,8 +414,11 @@ export default function FullWidthTabs() {
           side: side.toUpperCase(),
           type: type.toUpperCase(),
           timeInForce: "GTC",
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-          price: parseFloat(parseFloat(price)),
+          quantity: parseFloat(
+            parseFloat(quantity).toFixed(coin.quantityPrecision || 2)
+          ),
+          price: parseFloat(parseFloat(price).toFixed(coin.pricePrecision)),
+          leverage: parseFloat(leverage),
         };
       }
       if (type === "market") {
@@ -356,40 +426,40 @@ export default function FullWidthTabs() {
           symbol,
           side: side.toUpperCase(),
           type: type.toUpperCase(),
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
+          quantity: parseFloat(
+            parseFloat(quantity).toFixed(coin.quantityPrecision || 2)
+          ),
+          leverage: parseFloat(leverage),
         };
       }
-      if (type === "stop" || type === "take_profit") {
+      if (type === "stop_market") {
         return {
           symbol,
           side: side.toUpperCase(),
           type: type.toUpperCase(),
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-          price: parseFloat(parseFloat(price)),
+          quantity: parseFloat(
+            parseFloat(quantity).toFixed(coin.quantityPrecision || 2)
+          ),
+          stopPrice: parseFloat(parseFloat(stopPrice)),
+          leverage: parseFloat(leverage),
+        };
+      }
+      if (type === "stop") {
+        return {
+          symbol,
+          side: side.toUpperCase(),
+          type: type.toUpperCase(),
+          quantity: parseFloat(
+            parseFloat(quantity).toFixed(coin.quantityPrecision || 2)
+          ),
+          price: parseFloat(parseFloat(price).toFixed(coin.pricePrecision)),
           stopPrice: parseFloat(parseFloat(stopPrice)),
         };
         // quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-        // price: parseFloat(parseFloat(price)),
+        // price: parseFloat(parseFloat(price).toFixed(2)),
         // stopPrice: parseFloat(parseFloat(stopPrice)),
         // quoteOrderQty: parseFloat(parseFloat(quoteOrderQty).toFixed(3)),
         // leverage: parseFloat(leverage),
-      }
-      if (type === "stop_market" || type === "take_profit_market") {
-        return {
-          symbol,
-          side,
-          type,
-          stopPrice: parseFloat(parseFloat(stopPrice)),
-        };
-      }
-      if (type === "trailing_stop_market") {
-        return {
-          symbol,
-          side,
-          type,
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-          callbackRate: parseFloat(parseFloat(callbackRate)),
-        };
       }
     } else {
       if (type === "limit") {
@@ -399,8 +469,8 @@ export default function FullWidthTabs() {
           type: type.toUpperCase(),
 
           timeInForce: "GTC",
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-          price: parseFloat(parseFloat(price)),
+          quantity: parseFloat(parseFloat(quantity).toFixed(2)),
+          price: parseFloat(parseFloat(price).toFixed(2)),
         };
       }
       if (type === "market") {
@@ -408,8 +478,7 @@ export default function FullWidthTabs() {
           symbol,
           side: side.toUpperCase(),
           type: type.toUpperCase(),
-
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
+          quantity: parseFloat(parseFloat(quantity).toFixed(2)),
         };
       }
       if (type === "stop_loss" || type === "take_profit") {
@@ -417,23 +486,27 @@ export default function FullWidthTabs() {
           symbol,
           side: side.toUpperCase(),
           type: type.toUpperCase(),
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
+          quantity: parseFloat(parseFloat(quantity).toFixed(2)),
           stopPrice: parseFloat(parseFloat(stopPrice)),
         };
         // quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-        // price: parseFloat(parseFloat(price)),
+        // price: parseFloat(parseFloat(price).toFixed(2)),
         // stopPrice: parseFloat(parseFloat(stopPrice)),
         // quoteOrderQty: parseFloat(parseFloat(quoteOrderQty).toFixed(3)),
         // leverage: parseFloat(leverage),
       }
-      if (type === "stop_loss_limit" || type === "take_profit_limit") {
+      if (
+        type === "stop_limit" ||
+        type === "stop_loss_limit" ||
+        type === "take_profit_limit"
+      ) {
         return {
           symbol,
           side: side.toUpperCase(),
           type: type.toUpperCase(),
           timeInForce: "GTC",
-          quantity: parseFloat(parseFloat(quantity).toFixed(3)),
-          price: parseFloat(parseFloat(price)),
+          quantity: parseFloat(parseFloat(quantity).toFixed(2)),
+          price: parseFloat(parseFloat(price).toFixed(2)),
           stopPrice: parseFloat(parseFloat(stopPrice)),
         };
       }
@@ -459,6 +532,7 @@ export default function FullWidthTabs() {
         body: JSON.stringify(body),
       });
       const data = await response.json();
+      console.log(data);
       if (data.success) {
         toast.success(data.message);
         setOrder({
@@ -556,10 +630,65 @@ export default function FullWidthTabs() {
                               </FormControl>
                             </div>
 
-                            <div className="w-full mb-2 sm:mb-4">
+                            <div className="w-full mb-2 sm:mb-4 relative">
                               <FormControl fullWidth>
-                                <InputLabel id="symbol">Coin *</InputLabel>
-                                <Select
+                                {showCoins && (
+                                  <div className=" py-.5 flex items-center justify-between !border-none !outline-none w-full z-50">
+                                    <TextField
+                                      value={queryCoin}
+                                      name="query"
+                                      placeholder="Search Coin"
+                                      className="w-4/5"
+                                      onChange={(e) => handleCoinFilter(e)}
+                                    />
+                                    <button
+                                      onClick={() => setShowCoins(false)}
+                                      type="button"
+                                      className="mr-6 p-2 rounded-lg bg-gray-100"
+                                    >
+                                      <CloseIcon />
+                                    </button>
+                                  </div>
+                                )}
+                                {!showCoins && (
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => setShowCoins(true)}
+                                    className="text-black/80 py-[16px] hover:text-white"
+                                  >
+                                    {coin ? coin.symbol : "--Select Coin--"}
+                                  </Button>
+                                )}
+                                {showCoins && (
+                                  <div className="absolute top-16 left-0 bg-[#fff] z-50 shadow-2xl border p-2 rounded-lg border-gray-100 max-h-80 min-h-max overflow-y-scroll w-full">
+                                    {coins.length > 0 ? (
+                                      coins?.map((symb, idx) => {
+                                        return (
+                                          <button
+                                            key={symb.symbol}
+                                            name="symbol"
+                                            value={order.symbol}
+                                            type="button"
+                                            onClick={() =>
+                                              tickerPriceFounder(symb.symbol)
+                                            }
+                                            className="block px-4 py-2 hover:bg-black/10 w-full"
+                                          >
+                                            {symb.symbol}
+                                          </button>
+                                        );
+                                      })
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="block px-4 py-2 w-full"
+                                      >
+                                        No Coins
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {/*<Select
                                   labelId="symbol"
                                   id="symbol"
                                   label="Symbol"
@@ -579,9 +708,9 @@ export default function FullWidthTabs() {
                                       </MenuItem>
                                     );
                                   })}
-                                </Select>
+                                </Select>*/}
                                 {tickerPrice ? (
-                                  <small className="text-xs">
+                                  <small className="text-xs block mt-2">
                                     {tickerPrice}
                                   </small>
                                 ) : (
@@ -601,6 +730,19 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {assets.length
+                                ? assets.map((asset) => {
+                                    if (asset.asset === "USDT") {
+                                      return (
+                                        <div key={asset.asset} className="mt-2">
+                                          <small className="text-gray-500 text-xs">
+                                            {`Available: ${asset.free} ${asset.asset}`}
+                                          </small>
+                                        </div>
+                                      );
+                                    }
+                                  })
+                                : ""}
                             </div>
                             <div className="w-full text-left hidden sm:block mb-6 sm:my-8">
                               <TextField
@@ -617,7 +759,16 @@ export default function FullWidthTabs() {
                                 type="number"
                                 // color="white"
                                 variant="outlined"
-                              />
+                              />{" "}
+                              {coinData ? (
+                                <div className="mt-2">
+                                  <small className="text-gray-500 text-xs">
+                                    {`Available: ${coinData.free} ${coinData.asset}`}
+                                  </small>
+                                </div>
+                              ) : (
+                                ""
+                              )}
                             </div>
                           </div>
                           <div className="w-full sm:w-1/2">
@@ -682,6 +833,8 @@ export default function FullWidthTabs() {
                               </div>
                             )}
                             {(order.type === "stop_loss" ||
+                              order.type === "stop_market" ||
+                              order.type === "stop" ||
                               order.type === "take_profit" ||
                               order.type === "take_profit_limit" ||
                               order.type === "stop_loss_limit") && (
@@ -706,6 +859,7 @@ export default function FullWidthTabs() {
                             )}
                             {(order.type === "limit" ||
                               order.type === "stop_loss_limit" ||
+                              order.type === "stop" ||
                               order.type === "take_profit_limit") && (
                               <div className="w-full mb-4 sm:mb-8">
                                 <FormControl fullWidth>
@@ -741,6 +895,19 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {assets.length
+                              ? assets.map((asset) => {
+                                  if (asset.asset === "USDT") {
+                                    return (
+                                      <div key={asset.asset} className="mt-2">
+                                        <small className="text-gray-500 text-xs">
+                                          {`Available: ${asset.free} ${asset.asset}`}
+                                        </small>
+                                      </div>
+                                    );
+                                  }
+                                })
+                              : ""}
                           </div>
                           <div className="w-1/2 block sm:hidden mb-4 sm:my-8">
                             <TextField
@@ -757,7 +924,16 @@ export default function FullWidthTabs() {
                               type="number"
                               // color="white"
                               variant="outlined"
-                            />
+                            />{" "}
+                            {coinData ? (
+                              <div className="mt-2">
+                                <small className="text-gray-500 text-xs">
+                                  {`Available: ${coinData.free} ${coinData.asset}`}
+                                </small>
+                              </div>
+                            ) : (
+                              ""
+                            )}
                           </div>
                         </div>
                         <div className="w-full my-4 text-center">
@@ -816,18 +992,79 @@ export default function FullWidthTabs() {
                                 </Select>
                               </FormControl>
                             </div>
-                            <div className="w-full mb-2 sm:mb-4">
+                            <div className="w-full mb-2 sm:mb-4 relative">
                               <FormControl fullWidth>
-                                <InputLabel id="symbol">Coin *</InputLabel>
-                                <Select
+                                {showFutureCoins && (
+                                  <div className=" py-.5 flex items-center justify-between !border-none !outline-none w-full z-50">
+                                    <TextField
+                                      value={queryCoin}
+                                      name="query"
+                                      placeholder="Search Coin"
+                                      className="w-4/5"
+                                      onChange={(e) =>
+                                        handleFutureCoinFilter(e)
+                                      }
+                                    />
+                                    <button
+                                      onClick={() => setFutureCoins(false)}
+                                      type="type"
+                                      className="mr-6 p-2 rounded-lg bg-gray-100"
+                                    >
+                                      <CloseIcon />
+                                    </button>
+                                  </div>
+                                )}
+                                {!showFutureCoins && (
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => setShowFutureCoins(true)}
+                                    className="text-black/80 py-[16px] hover:text-white"
+                                  >
+                                    {coin ? coin.symbol : "--Select Coin--"}
+                                  </Button>
+                                )}
+                                {showFutureCoins && (
+                                  <div className="absolute top-16 left-0 bg-[#fff] z-50 shadow-2xl border p-2 rounded-lg border-gray-100 max-h-80 min-h-max overflow-y-scroll w-full">
+                                    {futureCoins.length > 0 ? (
+                                      futureCoins?.map((symb, idx) => {
+                                        return (
+                                          <button
+                                            key={symb.symbol}
+                                            name="symbol"
+                                            value={order.symbol}
+                                            type="button"
+                                            onClick={() =>
+                                              FutureTickerPriceFounder(
+                                                symb.symbol
+                                              )
+                                            }
+                                            className="block px-4 py-2 hover:bg-black/10 w-full"
+                                          >
+                                            {symb.symbol}
+                                          </button>
+                                        );
+                                      })
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="block px-4 py-2 w-full"
+                                      >
+                                        No Coins
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {/*<Select
                                   labelId="symbol"
                                   id="symbol"
                                   label="Symbol"
                                   name="symbol"
                                   value={order.symbol}
-                                  onChange={FutureTickerPriceFounder}
+                                  onChange={(e) =>
+                                    tickerPriceFounder(e.target.value)
+                                  }
                                 >
-                                  {futureCoins?.map((symb, idx) => {
+                                  {coins?.map((symb, idx) => {
                                     return (
                                       <MenuItem
                                         key={symb.symbol}
@@ -837,9 +1074,9 @@ export default function FullWidthTabs() {
                                       </MenuItem>
                                     );
                                   })}
-                                </Select>
+                                </Select>*/}
                                 {tickerPrice ? (
-                                  <small className="text-xs">
+                                  <small className="text-xs block mt-2">
                                     {tickerPrice}
                                   </small>
                                 ) : (
@@ -859,6 +1096,19 @@ export default function FullWidthTabs() {
                                 // color="white"
                                 variant="outlined"
                               />
+                              {assets.length
+                                ? assets.map((asset) => {
+                                    if (asset.asset === "USDT") {
+                                      return (
+                                        <div key={asset.asset} className="mt-2">
+                                          <small className="text-gray-500 text-xs">
+                                            {`Available: ${asset.free} ${asset.asset}`}
+                                          </small>
+                                        </div>
+                                      );
+                                    }
+                                  })
+                                : ""}
                             </div>
                             <div className="w-full text-left hidden sm:block mb-2 sm:my-4">
                               <TextField
@@ -875,7 +1125,16 @@ export default function FullWidthTabs() {
                                 type="number"
                                 // color="white"
                                 variant="outlined"
-                              />
+                              />{" "}
+                              {coinData ? (
+                                <div className="mt-2">
+                                  <small className="text-gray-500 text-xs">
+                                    {`Available: ${coinData.free} ${coinData.asset}`}
+                                  </small>
+                                </div>
+                              ) : (
+                                ""
+                              )}
                             </div>
                             <div className="w-full md:w-1/2 hidden sm:block mb-2 sm:my-4">
                               <Typography>Leverage</Typography>
@@ -953,10 +1212,8 @@ export default function FullWidthTabs() {
                                 </FormControl>
                               </div>
                             )}
-                            {(order.type === "stop_loss" ||
-                              order.type === "take_profit" ||
-                              order.type === "take_profit_limit" ||
-                              order.type === "stop_loss_limit") && (
+                            {(order.type === "stop" ||
+                              order.type === "stop_market") && (
                               <div className="w-full mb-4 sm:mb-8">
                                 <FormControl fullWidth>
                                   <TextField
@@ -976,29 +1233,8 @@ export default function FullWidthTabs() {
                                 </FormControl>
                               </div>
                             )}
-                            {order.type === "TRAILING_STOP_MARKET" && (
-                              <div className="w-full mb-4 sm:mb-8">
-                                <FormControl fullWidth>
-                                  <TextField
-                                    disabled={
-                                      order.symbol === "" ? true : false
-                                    }
-                                    className="!text-white text-center  !border-white"
-                                    id="callbackRate"
-                                    onChange={handleChange}
-                                    name="callbackRate"
-                                    label="CallBack Rate"
-                                    variant="outlined"
-                                    type="number"
-                                    value={order.callbackRate}
-                                    autoComplete="off"
-                                  />
-                                </FormControl>
-                              </div>
-                            )}
                             {(order.type === "limit" ||
-                              order.type === "stop_loss_limit" ||
-                              order.type === "take_profit_limit") && (
+                              order.type === "stop") && (
                               <div className="w-full mb-4 sm:mb-8">
                                 <FormControl fullWidth>
                                   <TextField
@@ -1033,6 +1269,19 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {assets.length
+                              ? assets.map((asset) => {
+                                  if (asset.asset === "USDT") {
+                                    return (
+                                      <div key={asset.asset} className="mt-2">
+                                        <small className="text-gray-500 text-xs">
+                                          {`Available: ${asset.free} ${asset.asset}`}
+                                        </small>
+                                      </div>
+                                    );
+                                  }
+                                })
+                              : ""}
                           </div>
                           <div className="w-1/2 block sm:hidden mb-4 sm:my-8">
                             <TextField
@@ -1050,6 +1299,15 @@ export default function FullWidthTabs() {
                               // color="white"
                               variant="outlined"
                             />
+                            {coinData ? (
+                              <div className="mt-2">
+                                <small className="text-gray-500 text-xs">
+                                  {`Available: ${coinData.free} ${coinData.asset}`}
+                                </small>
+                              </div>
+                            ) : (
+                              ""
+                            )}
                           </div>
                         </div>
                         <div className="w-full sm:w-1/2 block sm:hidden mb-4 sm:my-8">

@@ -19,8 +19,8 @@ export async function POST(req, res) {
         const exchange = new ccxt.bybit({
             apiKey, secret, enableRateLimit: true, urls: {
                 api: {
-                    public: 'https://api-testnet.bybit.com',
-                    private: 'https://api-testnet.bybit.com',
+                    public: "https://api.bybit.com",
+                    private: "https://api.bybit.com",
                 },
             },
         })
@@ -31,9 +31,7 @@ export async function POST(req, res) {
         } else {
             // const resp = await exchange.publicGetV5MarketTickers();
             const resp = await exchange.publicGetDerivativesV3PublicTickers({ symbol: body.ticker, category: "linear" });
-            console.log(resp.result)
             const tickerPrice = resp.result.list[0].lastPrice;
-
             return NextResponse.json({ success: true, tickerPrice, }, { status: 200 })
         }
 

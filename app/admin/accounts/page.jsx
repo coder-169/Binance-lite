@@ -1,9 +1,11 @@
-'use client'
+"use client";
 
 import Loader from "@/app/components/Loader";
 import AdminLayout from "@/app/layouts/AdminLayout";
+import { useRouter } from "next/navigation";
+import { Router } from "next/router";
 import { useEffect, useState } from "react";
-import {FaAngleDown} from "react-icons/fa6"
+import { FaAngleDown } from "react-icons/fa6";
 import { toast } from "react-toastify";
 
 const Page = () => {
@@ -13,6 +15,7 @@ const Page = () => {
   const [choice, setChoice] = useState("user");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   const getUsers = async () => {
     setLoading(true);
     try {
@@ -24,7 +27,7 @@ const Page = () => {
         },
       });
       const data = await response.json();
-      console.log(data)
+      console.log(data);
       if (data.success) {
         setUsers(data.users);
       } else {
@@ -59,6 +62,7 @@ const Page = () => {
       toast.error(error.message);
     }
     setLoading(false);
+    window.location.reload();
   };
   useEffect(() => {
     getUsers();
@@ -88,22 +92,22 @@ const Page = () => {
           <Loader />
         ) : (
           users && (
-            <div className="mx-24 .mt-12">
+            <div className="md:mx-24 mx-8 mt-12">
               <div className="w-full">
                 <div className="mt-6">
                   <dl className="divide-y divide-gray-400">
                     {users.filter((user) => user.role === choice).length > 0 ? (
-                      <div className="px-4 py-6 sm:grid sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-12 sm:gap-4 sm:px-0">
-                        <h3 className="text-md col-span-2  leading-3 ">
+                      <div className="px-4 py-6 grid grid-cols-12 sm:gap-4 sm:px-0">
+                        <h3 className="text-md col-span-4 md:col-span-3   leading-3 ">
                           User Name
                         </h3>
-                        <h3 className="text-md col-span-3 leading-3 ">
+                        <h3 className="text-md  hidden md:block  col-span-4 leading-3 ">
                           Email
                         </h3>
-                        <h3 className="text-md col-span-3 leading-3 ">
+                        <h3 className="text-md md:col-span-2 col-span-3 leading-3 ">
                           Contact
                         </h3>
-                        <h3 className="text-md col-span-2  leading-3">
+                        <h3 className="text-md  col-span-4 md:col-span-1  leading-3">
                           Role
                         </h3>
                       </div>
@@ -118,18 +122,18 @@ const Page = () => {
                         return (
                           <div
                             key={user._id}
-                            className="px-4 py-6 sm:grid sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-12 sm:gap-4 sm:px-0"
+                            className="px-4 py-6 grid grid-cols-12 sm:gap-4 sm:px-0"
                           >
-                            <h3 className="text-sm col-span-2  leading-3 font-medium">
+                            <h3 className="text-sm  col-span-4 md:col-span-3   leading-3 font-medium">
                               {user.username}
                             </h3>
-                            <h3 className="text-sm col-span-3 leading-3 font-medium">
+                            <h3 className="text-sm hidden md:block col-span-4 leading-3 font-medium">
                               {user.email}
                             </h3>
-                            <h3 className="text-sm col-span-3 leading-3 text-gray-600 font-medium">
+                            <h3 className="text-sm  md:col-span-2 col-span-3 leading-3 text-gray-600 font-medium">
                               {user.phone}
                             </h3>
-                            <div className="relative col-span-2 ">
+                            <div className="relative col-span-4 md:col-span-1">
                               <button
                                 onClick={() => {
                                   if (idOfSelected !== user._id) {
